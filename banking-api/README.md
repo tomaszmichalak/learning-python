@@ -1,6 +1,36 @@
-# Banking REST API with FastAPI
+# Banking REST API with Repository Pattern
 
-This project is generated with Claude AI and is a simple banking REST API built with FastAPI that demonstrates account management and transaction operations.
+This project demonstrates a clean banking REST API built with FastAPI that implements the Repository Pattern and follows clean architecture principles.
+
+## Architecture Overview
+
+The project follows a layered architecture:
+
+- **Presentation Layer** (`main.py`): FastAPI endpoints that handle HTTP requests and responses
+- **Service Layer** (`services.py`): Business logic and orchestration of operations
+- **Repository Layer** (`repositories.py`, `memory_repository.py`): Data access abstraction
+- **Domain Layer** (`models.py`): Data models and domain entities
+
+### Repository Pattern Benefits
+
+1. **Separation of Concerns**: Business logic is separated from data access logic
+2. **Testability**: Easy to mock repositories for unit testing
+3. **Flexibility**: Can easily swap data storage implementations (memory, database, etc.)
+4. **SOLID Principles**: Follows Dependency Inversion and Single Responsibility principles
+
+## Project Structure
+
+```
+banking-api/
+├── main.py                 # FastAPI application and route handlers
+├── models.py              # Pydantic models and domain entities
+├── repositories.py        # Abstract repository interfaces
+├── memory_repository.py   # In-memory repository implementations
+├── services.py           # Business logic layer
+├── test_repositories.py  # Unit tests for the repository pattern
+├── requirements.txt      # Project dependencies
+└── README.md            # This file
+```
 
 ## Features
 
@@ -35,6 +65,15 @@ This project is generated with Claude AI and is a simple banking REST API built 
    Or using uvicorn directly:
    ```bash
    uvicorn main:app --reload
+   ```
+
+3. **Run tests:**
+   ```bash
+   # Run the repository pattern tests
+   pytest test_repositories.py -v
+   
+   # Run existing API tests
+   python test_api.py
    ```
 
 ### Option 2: Docker
@@ -191,3 +230,22 @@ curl -X POST "http://localhost:8000/transfers" \
 - Authentication and authorization should be implemented for production use
 - Additional validations and business rules should be added
 - Error handling can be enhanced further
+
+## Testing
+
+The project includes comprehensive tests for the repository pattern:
+
+- **Repository Tests**: Test the abstract repository interfaces and implementations
+- **Service Layer Tests**: Test business logic in isolation
+- **Integration Tests**: Test the full flow from API to data storage
+
+```bash
+# Run all repository pattern tests
+pytest test_repositories.py -v
+
+# Run with coverage
+pytest test_repositories.py --cov=. --cov-report=html
+
+# Run existing API integration tests
+python test_api.py
+```
