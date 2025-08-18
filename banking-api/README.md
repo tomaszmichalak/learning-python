@@ -1,36 +1,63 @@
-# Banking REST API with Repository Pattern
+# Banking REST API with Package-by-Feature Architecture
 
-This project demonstrates a clean banking REST API built with FastAPI that implements the Repository Pattern and follows clean architecture principles.
+This project demonstrates a clean banking REST API built with FastAPI that implements the **Package-by-Feature** approach, Repository Pattern, and follows clean architecture principles.
 
 ## Architecture Overview
 
-The project follows a layered architecture:
+The project follows a **Package-by-Feature** approach with domain-driven design:
 
 - **Presentation Layer** (`main.py`): FastAPI endpoints that handle HTTP requests and responses
-- **Service Layer** (`services.py`): Business logic and orchestration of operations
-- **Repository Layer** (`repositories.py`, `memory_repository.py`): Data access abstraction
-- **Domain Layer** (`models.py`): Data models and domain entities
+- **Domain Layer** (`domains/`): Business domains organized by feature
+  - **Account Domain** (`domains/account/`): All account-related functionality
+  - **Transaction Domain** (`domains/transaction/`): All transaction-related functionality
 
-### Repository Pattern Benefits
+### Package-by-Feature Benefits
 
-1. **Separation of Concerns**: Business logic is separated from data access logic
-2. **Testability**: Easy to mock repositories for unit testing
-3. **Flexibility**: Can easily swap data storage implementations (memory, database, etc.)
-4. **SOLID Principles**: Follows Dependency Inversion and Single Responsibility principles
+1. **High Cohesion**: Related functionality is grouped together
+2. **Easy Navigation**: Find all account-related code in one place
+3. **Domain Isolation**: Clear boundaries between business domains
+4. **Scalability**: Easy to add new domains or features
+5. **Team Organization**: Teams can own specific domains
 
 ## Project Structure
 
 ```
 banking-api/
-├── main.py                 # FastAPI application and route handlers
-├── models.py              # Pydantic models and domain entities
-├── repositories.py        # Abstract repository interfaces
-├── memory_repository.py   # In-memory repository implementations
-├── services.py           # Business logic layer
-├── test_repositories.py  # Unit tests for the repository pattern
-├── requirements.txt      # Project dependencies
-└── README.md            # This file
+├── main.py                    # FastAPI application entry point
+├── start_server.py           # Server startup script
+├── domains/                   # Domain packages (Package-by-Feature)
+│   ├── __init__.py
+│   ├── account/              # Account domain
+│   │   ├── __init__.py
+│   │   ├── models.py         # Account models and DTOs
+│   │   ├── repository.py     # Account repository interface
+│   │   ├── memory_repository.py # In-memory account repository
+│   │   ├── service.py        # Account business logic
+│   │   └── test_account.py   # Account domain tests
+│   └── transaction/          # Transaction domain
+│       ├── __init__.py
+│       ├── models.py         # Transaction models and DTOs
+│       ├── repository.py     # Transaction repository interface
+│       ├── memory_repository.py # In-memory transaction repository
+│       ├── service.py        # Transaction business logic
+│       └── test_transaction.py # Transaction domain tests
+├── test_domains.py           # Comprehensive domain tests
+├── run_domain_tests.py       # Test runner for all domains
+├── test_api.py              # API integration tests
+├── requirements.txt          # Project dependencies
+├── Dockerfile               # Docker container configuration
+├── docker-compose.yml       # Docker Compose configuration
+└── README.md                # This file
 ```
+
+### Domain Architecture
+
+Each domain follows a consistent structure:
+
+- **`models.py`**: Pydantic models, domain entities, and DTOs
+- **`repository.py`**: Abstract repository interface
+- **`memory_repository.py`**: Concrete repository implementation
+- **`service.py`**: Business logic and domain operations
 
 ## Features
 
@@ -62,6 +89,11 @@ banking-api/
    python main.py
    ```
    
+   Or using the start server script:
+   ```bash
+   python start_server.py
+   ```
+   
    Or using uvicorn directly:
    ```bash
    uvicorn main:app --reload
@@ -69,8 +101,15 @@ banking-api/
 
 3. **Run tests:**
    ```bash
-   # Run the repository pattern tests
-   pytest test_repositories.py -v
+   # Run all domain tests (recommended)
+   python run_domain_tests.py
+   
+   # Run individual domain tests
+   python -m domains.account.test_account
+   python -m domains.transaction.test_transaction
+   
+   # Run the comprehensive domain test suite
+   pytest test_domains.py -v
    
    # Run existing API tests
    python test_api.py
@@ -233,18 +272,30 @@ curl -X POST "http://localhost:8000/transfers" \
 
 ## Testing
 
-The project includes comprehensive tests for the repository pattern:
+The project includes comprehensive tests organized by domain:
 
-- **Repository Tests**: Test the abstract repository interfaces and implementations
-- **Service Layer Tests**: Test business logic in isolation
-- **Integration Tests**: Test the full flow from API to data storage
+- **Domain-Specific Tests**: Each domain has its own test file
+  - `domains/account/test_account.py` - Account repository and service tests
+  - `domains/transaction/test_transaction.py` - Transaction repository and service tests
+- **Test Runner** (`run_domain_tests.py`): Runs all domain tests with clear reporting
+- **Comprehensive Tests** (`test_domains.py`): Cross-domain integration tests
 
 ```bash
-# Run all repository pattern tests
-pytest test_repositories.py -v
+# Run all domain tests with clear reporting
+python run_domain_tests.py
+
+# Run individual domain tests
+python -m domains.account.test_account
+python -m domains.transaction.test_transaction
+
+# Run comprehensive domain tests
+pytest test_domains.py -v
 
 # Run with coverage
-pytest test_repositories.py --cov=. --cov-report=html
+pytest test_domains.py --cov=domains --cov-report=html
+
+# Run all tests
+pytest -v
 
 # Run existing API integration tests
 python test_api.py

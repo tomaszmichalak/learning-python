@@ -1,22 +1,27 @@
 from fastapi import FastAPI
 from typing import List
-from models import (
-    Account, AccountCreate, Transaction, TransactionCreate, 
-    TransferRequest
-)
-from memory_repository import InMemoryAccountRepository, InMemoryTransactionRepository
-from services import BankingService
+
+# Import from domain packages
+from domains.account.models import Account, AccountCreate
+from domains.account.memory_repository import InMemoryAccountRepository
+from domains.account.service import AccountService
+
+from domains.transaction.models import Transaction, TransactionCreate, TransferRequest
+from domains.transaction.memory_repository import InMemoryTransactionRepository
+from domains.transaction.service import TransactionService
 
 app = FastAPI(
     title="Banking API",
-    description="A simple banking REST API with accounts and transactions",
-    version="1.0.0"
+    description="A simple banking REST API with accounts and transactions - Package by Feature",
+    version="2.0.0"
 )
 
-# Initialize repositories and service
+# Initialize repositories and services
 account_repository = InMemoryAccountRepository()
 transaction_repository = InMemoryTransactionRepository()
-banking_service = BankingService(account_repository, transaction_repository)
+
+account_service = AccountService(account_repository)
+transaction_service = TransactionService(transaction_repository, account_service)
 
 
 @app.get("/")
@@ -28,62 +33,62 @@ async def root():
 @app.post("/accounts", response_model=Account)
 async def create_account(account: AccountCreate):
     """Create a new bank account"""
-    return await banking_service.create_account(account)
+    return await account_service.create_account(account)
 
 
 @app.get("/accounts", response_model=List[Account])
 async def get_all_accounts():
     """Get all accounts"""
-    return await banking_service.get_all_accounts()
+    return await account_service.get_all_accounts()
 
 
 @app.get("/accounts/{account_id}", response_model=Account)
 async def get_account(account_id: str):
     """Get a specific account by ID"""
-    return await banking_service.get_account(account_id)
+    return await account_service.get_account(account_id)
 
 
 @app.put("/accounts/{account_id}", response_model=Account)
 async def update_account(account_id: str, account_update: AccountCreate):
     """Update an existing account"""
-    return await banking_service.update_account(account_id, account_update)
+    return await account_service.update_account(account_id, account_update)
 
 
 @app.delete("/accounts/{account_id}")
 async def delete_account(account_id: str):
     """Deactivate an account (soft delete)"""
-    await banking_service.delete_account(account_id)
+    await account_service.delete_account(account_id)
     return {"message": f"Account {account_id} has been deactivated"}
 
 
 @app.post("/transactions", response_model=Transaction)
 async def create_transaction(transaction: TransactionCreate):
     """Create a new transaction"""
-    return await banking_service.create_transaction(transaction)
+    return await transaction_service.create_transaction(transaction)
 
 
 @app.post("/transfers", response_model=List[Transaction])
 async def transfer_funds(transfer: TransferRequest):
     """Transfer funds between accounts"""
-    return await banking_service.transfer_funds(transfer)
+    return await transaction_service.transfer_funds(transfer)
 
 
 @app.get("/accounts/{account_id}/transactions", response_model=List[Transaction])
 async def get_account_transactions(account_id: str):
     """Get all transactions for a specific account"""
-    return await banking_service.get_account_transactions(account_id)
+    return await transaction_service.get_account_transactions(account_id)
 
 
 @app.get("/transactions", response_model=List[Transaction])
 async def get_all_transactions():
     """Get all transactions"""
-    return await banking_service.get_all_transactions()
+    return await transaction_service.get_all_transactions()
 
 
 @app.get("/transactions/{transaction_id}", response_model=Transaction)
 async def get_transaction(transaction_id: str):
     """Get a specific transaction by ID"""
-    return await banking_service.get_transaction(transaction_id)
+    return await transaction_service.get_transaction(transaction_id)
 
 
 if __name__ == "__main__":

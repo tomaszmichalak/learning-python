@@ -1,69 +1,22 @@
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 import uuid
-from models import Account, AccountCreate, Transaction, TransactionCreate, TransferRequest, TransactionType
-from repositories import AccountRepository, TransactionRepository
 from fastapi import HTTPException
+from .models import Transaction, TransactionCreate, TransferRequest, TransactionType
+from .repository import TransactionRepository
+from ..account.service import AccountService
 
 
-class BankingService:
-    """Service layer for banking operations."""
+class TransactionService:
+    """Service layer for transaction operations."""
     
-    def __init__(self, account_repository: AccountRepository, transaction_repository: TransactionRepository):
-        self.account_repository = account_repository
+    def __init__(self, transaction_repository: TransactionRepository, account_service: AccountService):
         self.transaction_repository = transaction_repository
-    
-    async def create_account(self, account_create: AccountCreate) -> Account:
-        """Create a new account."""
-        account_id = str(uuid.uuid4())
-        account = Account(
-            account_id=account_id,
-            account_holder=account_create.account_holder,
-            account_type=account_create.account_type,
-            balance=account_create.balance,
-            created_at=datetime.now(),
-            is_active=True
-        )
-        return await self.account_repository.create_account(account)
-    
-    async def get_account(self, account_id: str) -> Account:
-        """Get an account by ID."""
-        account = await self.account_repository.get_account(account_id)
-        if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
-        return account
-    
-    async def get_all_accounts(self) -> List[Account]:
-        """Get all accounts."""
-        return await self.account_repository.get_all_accounts()
-    
-    async def update_account(self, account_id: str, account_update: AccountCreate) -> Account:
-        """Update an account."""
-        existing_account = await self.account_repository.get_account(account_id)
-        if not existing_account:
-            raise HTTPException(status_code=404, detail="Account not found")
-        
-        updated_account = Account(
-            account_id=account_id,
-            account_holder=account_update.account_holder,
-            account_type=account_update.account_type,
-            balance=existing_account.balance,  # Keep existing balance
-            created_at=existing_account.created_at,
-            is_active=existing_account.is_active
-        )
-        return await self.account_repository.update_account(updated_account)
-    
-    async def delete_account(self, account_id: str) -> bool:
-        """Delete (deactivate) an account."""
-        if not await self.account_repository.account_exists(account_id):
-            raise HTTPException(status_code=404, detail="Account not found")
-        return await self.account_repository.delete_account(account_id)
+        self.account_service = account_service
     
     async def create_transaction(self, transaction_create: TransactionCreate) -> Transaction:
         """Create a new transaction."""
-        account = await self.account_repository.get_account(transaction_create.account_id)
-        if not account:
-            raise HTTPException(status_code=404, detail="Account not found")
+        account = await self.account_service.get_account(transaction_create.account_id)
         
         if not account.is_active:
             raise HTTPException(status_code=400, detail="Account is not active")
@@ -80,7 +33,7 @@ class BankingService:
         
         # Update account balance
         account.balance = new_balance
-        await self.account_repository.update_account(account)
+        await self.account_service.account_repository.update_account(account)
         
         # Create transaction record
         transaction_id = str(uuid.uuid4())
@@ -98,13 +51,8 @@ class BankingService:
     
     async def transfer_funds(self, transfer_request: TransferRequest) -> List[Transaction]:
         """Transfer funds between accounts."""
-        from_account = await self.account_repository.get_account(transfer_request.from_account_id)
-        to_account = await self.account_repository.get_account(transfer_request.to_account_id)
-        
-        if not from_account:
-            raise HTTPException(status_code=404, detail="Source account not found")
-        if not to_account:
-            raise HTTPException(status_code=404, detail="Destination account not found")
+        from_account = await self.account_service.get_account(transfer_request.from_account_id)
+        to_account = await self.account_service.get_account(transfer_request.to_account_id)
         
         if not from_account.is_active or not to_account.is_active:
             raise HTTPException(status_code=400, detail="One or both accounts are not active")
@@ -117,8 +65,8 @@ class BankingService:
         to_account.balance += transfer_request.amount
         
         # Update accounts
-        await self.account_repository.update_account(from_account)
-        await self.account_repository.update_account(to_account)
+        await self.account_service.account_repository.update_account(from_account)
+        await self.account_service.account_repository.update_account(to_account)
         
         # Create transaction records
         withdrawal_id = str(uuid.uuid4())
@@ -165,7 +113,7 @@ class BankingService:
     
     async def get_account_transactions(self, account_id: str) -> List[Transaction]:
         """Get all transactions for a specific account."""
-        if not await self.account_repository.account_exists(account_id):
+        if not await self.account_service.account_exists(account_id):
             raise HTTPException(status_code=404, detail="Account not found")
         
         transactions = await self.transaction_repository.get_account_transactions(account_id)

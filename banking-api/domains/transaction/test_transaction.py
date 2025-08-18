@@ -1,52 +1,14 @@
 import pytest
 import asyncio
 from datetime import datetime
-from models import Account, AccountCreate, Transaction, TransactionCreate, TransferRequest, AccountType, TransactionType
-from memory_repository import InMemoryAccountRepository, InMemoryTransactionRepository
-from services import BankingService
+from .models import Transaction, TransactionCreate, TransferRequest, TransactionType
+from .memory_repository import InMemoryTransactionRepository
+from .service import TransactionService
 
-
-@pytest.mark.asyncio
-async def test_account_repository():
-    """Test account repository operations."""
-    repo = InMemoryAccountRepository()
-    
-    # Create account
-    account = Account(
-        account_id="test-123",
-        account_holder="John Doe",
-        account_type=AccountType.CHECKING,
-        balance=1000.0,
-        created_at=datetime.now(),
-        is_active=True
-    )
-    
-    created_account = await repo.create_account(account)
-    assert created_account.account_id == "test-123"
-    assert created_account.account_holder == "John Doe"
-    
-    # Get account
-    retrieved_account = await repo.get_account("test-123")
-    assert retrieved_account is not None
-    assert retrieved_account.account_holder == "John Doe"
-    
-    # Account exists
-    assert await repo.account_exists("test-123") == True
-    assert await repo.account_exists("non-existent") == False
-    
-    # Get all accounts
-    all_accounts = await repo.get_all_accounts()
-    assert len(all_accounts) == 1
-    
-    # Update account
-    account.balance = 1500.0
-    updated_account = await repo.update_account(account)
-    assert updated_account.balance == 1500.0
-    
-    # Delete account (soft delete)
-    await repo.delete_account("test-123")
-    active_accounts = await repo.get_all_accounts()
-    assert len(active_accounts) == 0  # Should return only active accounts
+# Import from account domain for dependencies
+from ..account.models import Account, AccountCreate, AccountType
+from ..account.memory_repository import InMemoryAccountRepository
+from ..account.service import AccountService
 
 
 @pytest.mark.asyncio
@@ -85,65 +47,66 @@ async def test_transaction_repository():
 
 
 @pytest.mark.asyncio
-async def test_banking_service():
-    """Test banking service operations."""
+async def test_transaction_service():
+    """Test transaction service operations."""
+    # Setup dependencies
     account_repo = InMemoryAccountRepository()
+    account_service = AccountService(account_repo)
     transaction_repo = InMemoryTransactionRepository()
-    service = BankingService(account_repo, transaction_repo)
+    transaction_service = TransactionService(transaction_repo, account_service)
     
-    # Create account
+    # Create account first
     account_create = AccountCreate(
-        account_holder="Alice Smith",
-        account_type=AccountType.SAVINGS,
+        account_holder="Bob Wilson",
+        account_type=AccountType.CHECKING,
         balance=500.0
     )
-    
-    created_account = await service.create_account(account_create)
-    account_id = created_account.account_id
-    assert created_account.account_holder == "Alice Smith"
-    assert created_account.balance == 500.0
+    account = await account_service.create_account(account_create)
     
     # Create deposit transaction
     deposit = TransactionCreate(
-        account_id=account_id,
+        account_id=account.account_id,
         amount=200.0,
         transaction_type=TransactionType.DEPOSIT,
         description="Test deposit"
     )
     
-    deposit_transaction = await service.create_transaction(deposit)
+    deposit_transaction = await transaction_service.create_transaction(deposit)
     assert deposit_transaction.amount == 200.0
+    assert deposit_transaction.transaction_type == TransactionType.DEPOSIT
     
     # Check account balance updated
-    updated_account = await service.get_account(account_id)
+    updated_account = await account_service.get_account(account.account_id)
     assert updated_account.balance == 700.0
     
     # Create withdrawal transaction
     withdrawal = TransactionCreate(
-        account_id=account_id,
-        amount=100.0,
+        account_id=account.account_id,
+        amount=150.0,
         transaction_type=TransactionType.WITHDRAWAL,
         description="Test withdrawal"
     )
     
-    withdrawal_transaction = await service.create_transaction(withdrawal)
-    assert withdrawal_transaction.amount == 100.0
+    withdrawal_transaction = await transaction_service.create_transaction(withdrawal)
+    assert withdrawal_transaction.amount == 150.0
     
     # Check final balance
-    final_account = await service.get_account(account_id)
-    assert final_account.balance == 600.0
+    final_account = await account_service.get_account(account.account_id)
+    assert final_account.balance == 550.0
     
     # Get account transactions
-    transactions = await service.get_account_transactions(account_id)
+    transactions = await transaction_service.get_account_transactions(account.account_id)
     assert len(transactions) == 2  # deposit and withdrawal
 
 
 @pytest.mark.asyncio
 async def test_transfer_funds():
     """Test fund transfer between accounts."""
+    # Setup dependencies
     account_repo = InMemoryAccountRepository()
+    account_service = AccountService(account_repo)
     transaction_repo = InMemoryTransactionRepository()
-    service = BankingService(account_repo, transaction_repo)
+    transaction_service = TransactionService(transaction_repo, account_service)
     
     # Create two accounts
     account1_create = AccountCreate(
@@ -151,14 +114,14 @@ async def test_transfer_funds():
         account_type=AccountType.CHECKING,
         balance=1000.0
     )
-    account1 = await service.create_account(account1_create)
+    account1 = await account_service.create_account(account1_create)
     
     account2_create = AccountCreate(
         account_holder="Carol Davis",
         account_type=AccountType.SAVINGS,
         balance=500.0
     )
-    account2 = await service.create_account(account2_create)
+    account2 = await account_service.create_account(account2_create)
     
     # Transfer funds
     transfer = TransferRequest(
@@ -168,21 +131,30 @@ async def test_transfer_funds():
         description="Test transfer"
     )
     
-    transfer_transactions = await service.transfer_funds(transfer)
+    transfer_transactions = await transaction_service.transfer_funds(transfer)
     assert len(transfer_transactions) == 2  # withdrawal and deposit
     
     # Check account balances
-    account1_after = await service.get_account(account1.account_id)
-    account2_after = await service.get_account(account2.account_id)
+    account1_after = await account_service.get_account(account1.account_id)
+    account2_after = await account_service.get_account(account2.account_id)
     
     assert account1_after.balance == 700.0  # 1000 - 300
     assert account2_after.balance == 800.0  # 500 + 300
+    
+    # Check transaction records
+    account1_transactions = await transaction_service.get_account_transactions(account1.account_id)
+    account2_transactions = await transaction_service.get_account_transactions(account2.account_id)
+    
+    assert len(account1_transactions) == 1  # withdrawal
+    assert len(account2_transactions) == 1  # deposit
+    
+    assert account1_transactions[0].transaction_type == TransactionType.TRANSFER
+    assert account2_transactions[0].transaction_type == TransactionType.TRANSFER
 
 
 if __name__ == "__main__":
     # Run tests
-    asyncio.run(test_account_repository())
     asyncio.run(test_transaction_repository())
-    asyncio.run(test_banking_service())
+    asyncio.run(test_transaction_service())
     asyncio.run(test_transfer_funds())
-    print("All tests passed!")
+    print("✅ Transaction domain tests passed!")
