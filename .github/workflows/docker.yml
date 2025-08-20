@@ -1,0 +1,90 @@
+name: Docker Build & Test
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'banking-api/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'banking-api/**'
+
+jobs:
+  # Detect which modules with Docker support have changes
+  detect-docker-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      banking-api: ${{ steps.changes.outputs.banking-api }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            banking-api:
+              - 'banking-api/**'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and test Banking API Docker image
+  docker-banking-api:
+    needs: detect-docker-changes
+    if: needs.detect-docker-changes.outputs.banking-api == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker image
+        working-directory: ./banking-api
+        run: |
+          docker build -t banking-api:test .
+          
+      - name: Test Docker image
+        working-directory: ./banking-api
+        run: |
+          # Test that the image builds and runs
+          docker run -d --name banking-api-test -p 8001:8000 banking-api:test
+          
+          # Wait for the service to start
+          echo "Waiting for service to start..."
+          sleep 10
+          
+          # Test that the service responds
+          docker logs banking-api-test
+          
+          # Test health endpoint
+          curl -f http://localhost:8001/ || (docker logs banking-api-test && exit 1)
+          curl -f http://localhost:8001/docs || (docker logs banking-api-test && exit 1)
+          
+          # Cleanup
+          docker stop banking-api-test
+          docker rm banking-api-test
+          
+      - name: Test with Docker Compose
+        working-directory: ./banking-api
+        run: |
+          if [ -f docker-compose.yml ]; then
+            docker-compose up -d
+            sleep 10
+            curl -f http://localhost:8000/ || (docker-compose logs && exit 1)
+            docker-compose down
+          fi
+          
+      - name: Scan for vulnerabilities
+        working-directory: ./banking-api
+        run: |
+          # Install Trivy for vulnerability scanning
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+          
+          # Scan the built image
+          trivy image --exit-code 0 --severity HIGH,CRITICAL banking-api:test
