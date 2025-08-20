@@ -7,6 +7,7 @@ import requests
 import json
 
 BASE_URL = "http://localhost:8000"
+REQUEST_TIMEOUT = 10  # seconds - timeout for all HTTP requests
 
 
 def test_banking_api():
@@ -29,7 +30,7 @@ def test_banking_api():
     }
     
     # Create account 1
-    response1 = requests.post(f"{BASE_URL}/accounts", json=account1_data)
+    response1 = requests.post(f"{BASE_URL}/accounts", json=account1_data, timeout=REQUEST_TIMEOUT)
     if response1.status_code == 200:
         account1 = response1.json()
         print(f"✅ Created account for {account1['account_holder']}")
@@ -40,7 +41,7 @@ def test_banking_api():
         return
     
     # Create account 2
-    response2 = requests.post(f"{BASE_URL}/accounts", json=account2_data)
+    response2 = requests.post(f"{BASE_URL}/accounts", json=account2_data, timeout=REQUEST_TIMEOUT)
     if response2.status_code == 200:
         account2 = response2.json()
         print(f"✅ Created account for {account2['account_holder']}")
@@ -60,7 +61,7 @@ def test_banking_api():
         "description": "Paycheck deposit"
     }
     
-    response = requests.post(f"{BASE_URL}/transactions", json=deposit_data)
+    response = requests.post(f"{BASE_URL}/transactions", json=deposit_data, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         transaction = response.json()
         print(f"✅ Deposit successful!")
@@ -79,7 +80,7 @@ def test_banking_api():
         "description": "ATM withdrawal"
     }
     
-    response = requests.post(f"{BASE_URL}/transactions", json=withdrawal_data)
+    response = requests.post(f"{BASE_URL}/transactions", json=withdrawal_data, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         transaction = response.json()
         print(f"✅ Withdrawal successful!")
@@ -98,7 +99,7 @@ def test_banking_api():
         "description": "Money transfer to Bob"
     }
     
-    response = requests.post(f"{BASE_URL}/transfers", json=transfer_data)
+    response = requests.post(f"{BASE_URL}/transfers", json=transfer_data, timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         transactions = response.json()
         print(f"✅ Transfer successful!")
@@ -111,8 +112,8 @@ def test_banking_api():
     # 5. Get account details
     print("\n5. Checking final account balances...")
     
-    response1 = requests.get(f"{BASE_URL}/accounts/{account1['account_id']}")
-    response2 = requests.get(f"{BASE_URL}/accounts/{account2['account_id']}")
+    response1 = requests.get(f"{BASE_URL}/accounts/{account1['account_id']}", timeout=REQUEST_TIMEOUT)
+    response2 = requests.get(f"{BASE_URL}/accounts/{account2['account_id']}", timeout=REQUEST_TIMEOUT)
     
     if response1.status_code == 200 and response2.status_code == 200:
         acc1 = response1.json()
@@ -123,7 +124,7 @@ def test_banking_api():
     # 6. Get transaction history for account 1
     print(f"\n6. Transaction history for {account1['account_holder']}...")
     
-    response = requests.get(f"{BASE_URL}/accounts/{account1['account_id']}/transactions")
+    response = requests.get(f"{BASE_URL}/accounts/{account1['account_id']}/transactions", timeout=REQUEST_TIMEOUT)
     if response.status_code == 200:
         transactions = response.json()
         print(f"✅ Found {len(transactions)} transactions:")
@@ -140,5 +141,8 @@ if __name__ == "__main__":
         print("❌ Cannot connect to the API server.")
         print("Please make sure the FastAPI server is running on http://localhost:8000")
         print("Start it with: python main.py")
+    except requests.exceptions.Timeout:
+        print(f"❌ Request timed out after {REQUEST_TIMEOUT} seconds.")
+        print("The server might be overloaded or unresponsive.")
     except Exception as e:
         print(f"❌ An error occurred: {e}")
