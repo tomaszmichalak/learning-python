@@ -1,5 +1,9 @@
 # Banking REST API with Package-by-Feature Architecture
 
+[![CI/CD Pipeline](https://github.com/tomaszmichalak/learning-python/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/tomaszmichalak/learning-python/actions/workflows/ci.yml)
+[![Docker Build & Test](https://github.com/tomaszmichalak/learning-python/workflows/Docker%20Build%20%26%20Test/badge.svg)](https://github.com/tomaszmichalak/learning-python/actions/workflows/docker.yml)
+[![Security Scan](https://github.com/tomaszmichalak/learning-python/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/tomaszmichalak/learning-python/actions/workflows/ci.yml)
+
 This project demonstrates a clean banking REST API built with FastAPI that implements the **Package-by-Feature** approach, Repository Pattern, and follows clean architecture principles.
 
 ## Architecture Overview
@@ -300,3 +304,97 @@ pytest -v
 # Run existing API integration tests
 python test_api.py
 ```
+
+## CI/CD with GitHub Actions
+
+This project includes GitHub Actions workflows for continuous integration and deployment:
+
+### Workflows
+
+1. **CI Workflow** (`.github/workflows/ci.yml`)
+   - Runs on Python 3.13
+   - Executes linting (flake8), type checking (mypy), and security scans
+   - Runs all domain tests and API integration tests
+   - Performs security checks with Bandit and Safety
+   - Smart path detection to run tests only when relevant code changes
+
+2. **Docker Build and Test** (`.github/workflows/docker.yml`)
+   - Builds Docker images with BuildKit caching
+   - Tests the containerized application with real API calls
+   - Tests Docker Compose setup
+   - Triggered when banking-api module changes
+
+3. **Test Python Module** (`.github/workflows/test-python-module.yml`)
+   - Reusable workflow for testing individual Python modules
+   - Called by the main CI workflow for modular testing
+   - Supports different Python modules independently
+
+### Setting Up GitHub Actions
+
+1. **Fork or clone the repository** to your GitHub account
+
+2. **Update badge URLs** in README.md by replacing `tomaszmichalak` with your GitHub tomaszmichalak:
+   ```markdown
+   [![CI](https://github.com/YOUR_tomaszmichalak/learning-python/workflows/CI/badge.svg)]
+   ```
+
+3. **Push to main branch** to trigger workflows - the workflows use smart path detection to only run relevant tests
+
+#```
+
+## Security Configuration
+
+This project includes security best practices to address common security scan findings:
+
+### Host Binding Configuration
+
+The application uses secure host binding defaults:
+
+- **Local Development**: Binds to `127.0.0.1` (localhost only) by default
+- **Docker Containers**: Binds to `0.0.0.0` (required for container networking)
+- **Production**: Configurable via environment variables
+
+#### Environment Variables
+
+```bash
+# Set the host binding (default: 127.0.0.1 for local development)
+export HOST=127.0.0.1       # Local development (secure default)
+export HOST=0.0.0.0         # Docker/container environments
+export PORT=8000            # Port number (default: 8000)
+```
+
+#### Usage Examples
+
+```bash
+# Local development (secure default)
+python start_server.py
+# Starts on 127.0.0.1:8000
+
+# Allow external connections (if needed for development)
+HOST=0.0.0.0 python start_server.py
+# Starts on 0.0.0.0:8000
+
+# Custom port
+PORT=3000 python start_server.py
+# Starts on 127.0.0.1:3000
+```
+
+#### Docker Environments
+
+In Docker containers, `0.0.0.0` binding is automatically used and is safe within the container environment:
+
+```dockerfile
+# Dockerfile uses 0.0.0.0 binding (safe in containers)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]  # nosec B104
+```
+
+The `# nosec B104` comment tells security scanners that this usage is intentional and reviewed.
+
+### Security Notes
+
+- Never bind to `0.0.0.0` on production servers unless behind proper firewall/proxy
+- Use environment variables for configuration instead of hardcoded values
+- Container binding to `0.0.0.0` is safe within container networking
+- - Always review security scan findings and apply appropriate mitigations
+
+````

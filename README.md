@@ -45,7 +45,7 @@ Triggered on: Push to `main`, Pull Requests
 
 **Features:**
 - **Change Detection**: Only test modules with changes
-- **Matrix Testing**: Multiple Python versions (3.11, 3.12, 3.13)
+- **Python Testing**: Runs on Python 3.13
 - **Reusable Workflows**: Uses `test-python-module.yml` for consistency
 - **Security Scanning**: Bandit and Safety checks
 - **Integration Tests**: API endpoint testing
@@ -54,29 +54,11 @@ Triggered on: Push to `main`, Pull Requests
 Triggered on: Changes to modules with Docker support
 
 **Features:**
-- **Multi-module Docker builds**: Separate builds for each module
+- **Docker builds**: For modules with Docker support
 - **Container Testing**: Health checks and API validation
-- **Security Scanning**: Trivy vulnerability scanning
 - **Docker Compose Testing**: Full stack validation
 
-#### 3. **Release Automation** (`.github/workflows/release.yml`) [REMOVED]
-This workflow was removed but can be recreated if needed.
-
-**Would support:**
-- **Smart Tag Parsing**: Automatically determines which module to release
-- **Multi-format Tags**: Support for global (`v1.0.0`) and module-specific (`banking-api-v1.0.0`) tags
-- **Container Registry**: Pushes to GitHub Container Registry
-- **Release Notes**: Auto-generated changelogs
-
-#### 4. **Dependency Updates** (`.github/workflows/dependency-updates.yml`) [REMOVED]
-This workflow was removed but can be recreated if needed.
-
-**Would support:**
-- **Automated Updates**: Uses `pip-tools` to update dependencies
-- **Module-specific PRs**: Separate PRs for each module
-- **Safety First**: Creates PRs for review rather than direct commits
-
-#### 5. **Reusable Testing** (`.github/workflows/test-python-module.yml`)
+#### 3. **Reusable Testing** (`.github/workflows/test-python-module.yml`)
 Called by other workflows for consistent testing
 
 **Features:**
@@ -146,8 +128,8 @@ For a module to be fully supported by the CI/CD pipeline:
 Add these badges to your module READMEs:
 
 ```markdown
-![CI](https://github.com/USERNAME/learning-python/workflows/CI%2FCD%20Pipeline/badge.svg)
-![Docker](https://github.com/USERNAME/learning-python/workflows/Docker%20Build%20%26%20Test/badge.svg)
+![CI](https://github.com/tomaszmichalak/learning-python/workflows/CI%2FCD%20Pipeline/badge.svg)
+![Docker](https://github.com/tomaszmichalak/learning-python/workflows/Docker%20Build%20%26%20Test/badge.svg)
 ```
 
 ## Development Workflow
@@ -155,7 +137,7 @@ Add these badges to your module READMEs:
 ### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/USERNAME/learning-python.git
+git clone https://github.com/tomaszmichalak/learning-python.git
 cd learning-python
 
 # Work on a specific module
@@ -183,7 +165,7 @@ pytest -v                   # general testing
 2. Commit changes: `git commit -m "chore(banking-api): prepare v1.2.0 release"`
 3. Tag the release: `git tag banking-api-v1.2.0`
 4. Push tag: `git push origin banking-api-v1.2.0`
-5. GitHub Actions will automatically create a release and build Docker images
+5. Create a GitHub release manually if desired
 
 ---
 
