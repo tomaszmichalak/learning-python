@@ -93,4 +93,11 @@ async def get_transaction(transaction_id: str):
 # simple change to validate CI
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    
+    # Use localhost for local development, 0.0.0.0 only when explicitly configured
+    # This prevents the security scanner from flagging hardcoded bind-all-interfaces
+    host = os.getenv("HOST", "127.0.0.1")  # Default to localhost for security
+    port = int(os.getenv("PORT", "8000"))
+    
+    uvicorn.run(app, host=host, port=port)
