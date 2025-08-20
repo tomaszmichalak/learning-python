@@ -1,0 +1,123 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Detect which modules have changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      banking-api: ${{ steps.changes.outputs.banking-api }}
+      basics: ${{ steps.changes.outputs.basics }}
+      any-python: ${{ steps.changes.outputs.any-python }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            banking-api:
+              - 'banking-api/**'
+            basics:
+              - 'basics/**'
+            any-python:
+              - '**/*.py'
+              - '**/requirements*.txt'
+
+  # Test Banking API module
+  test-banking-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.banking-api == 'true'
+    uses: ./.github/workflows/test-python-module.yml
+    with:
+      module_path: banking-api
+      python_versions: '["3.13"]'
+      run_tests: true
+      test_command: 'python run_domain_tests.py && pytest test_domains.py -v'
+
+  # Test Basics module (lightweight check)
+  test-basics:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.basics == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          
+      - name: Test basics module
+        working-directory: ./basics
+        run: |
+          python -m py_compile *.py
+          echo "✅ Basics module syntax check passed"
+
+  # Security scan across all modules
+  security-scan:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any-python == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          
+      - name: Install security tools
+        run: |
+          pip install bandit safety
+          
+      - name: Run bandit security scan
+        run: |
+          bandit -r . -f json -o bandit-report.json || true
+          bandit -r . --severity-level medium --exclude .venv
+          
+      - name: Run safety check
+        run: |
+          find . -name "requirements*.txt" -not -path "./.venv/*" -exec safety check -r {} \; || true
+
+  # Integration tests for API modules
+  integration-tests:
+    needs: [detect-changes, test-banking-api]
+    if: needs.detect-changes.outputs.banking-api == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          
+      - name: Install dependencies
+        working-directory: ./banking-api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run API integration tests
+        working-directory: ./banking-api
+        run: |
+          # Start the API in background
+          python main.py &
+          API_PID=$!
+          
+          # Wait for API to start
+          sleep 5
+          
+          # Run integration tests
+          python test_api.py
+          
+          # Cleanup
+          kill $API_PID || true

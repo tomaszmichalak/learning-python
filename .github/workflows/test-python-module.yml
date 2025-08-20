@@ -1,0 +1,96 @@
+name: Python Module Test
+
+on:
+  workflow_call:
+    inputs:
+      module_path:
+        required: true
+        type: string
+        description: 'Path to the module directory'
+      python_versions:
+        required: false
+        type: string
+        default: '["3.13"]'
+        description: 'JSON array of Python versions to test'
+      run_tests:
+        required: false
+        type: boolean
+        default: true
+        description: 'Whether to run tests'
+      test_command:
+        required: false
+        type: string
+        default: 'pytest -v'
+        description: 'Command to run tests'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(inputs.python_versions) }}
+        
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ inputs.module_path }}-${{ hashFiles(format('{0}/requirements*.txt', inputs.module_path)) }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ inputs.module_path }}-
+            
+      - name: Install dependencies
+        working-directory: ./${{ inputs.module_path }}
+        run: |
+          python -m pip install --upgrade pip
+          
+          # Install main requirements
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          
+          # Install dev requirements
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+          
+          # Install common test tools if not in requirements
+          pip install pytest pytest-cov flake8 black isort mypy || true
+          
+      - name: Lint with flake8
+        working-directory: ./${{ inputs.module_path }}
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          
+      - name: Check code formatting
+        working-directory: ./${{ inputs.module_path }}
+        run: |
+          black --check --diff . || true
+          isort --check-only --diff . || true
+          
+      - name: Type check
+        working-directory: ./${{ inputs.module_path }}
+        run: |
+          mypy . --ignore-missing-imports || true
+          
+      - name: Run tests
+        if: inputs.run_tests
+        working-directory: ./${{ inputs.module_path }}
+        run: |
+          # Try different test commands based on what's available
+          if [ -f run_domain_tests.py ]; then
+            python run_domain_tests.py
+          elif [ -f test_*.py ] || [ -d tests/ ]; then
+            ${{ inputs.test_command }}
+          else
+            echo "No tests found to run"
+            exit 0
+          fi
