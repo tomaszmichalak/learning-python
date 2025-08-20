@@ -90,7 +90,7 @@ async def get_transaction(transaction_id: str):
     """Get a specific transaction by ID"""
     return await transaction_service.get_transaction(transaction_id)
 
-
+# simple change to validate CI
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
