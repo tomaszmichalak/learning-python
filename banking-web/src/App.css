@@ -1,0 +1,156 @@
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ccc;
+}
+
+.app-header h1 {
+  margin: 0;
+  color: #333;
+}
+
+.refresh-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.refresh-btn:hover {
+  background-color: #0056b3;
+}
+
+.loading, .error, .no-accounts {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #dc3545;
+}
+
+.error button {
+  margin-top: 1rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error button:hover {
+  background-color: #c82333;
+}
+
+.accounts-container {
+  text-align: left;
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.account-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.account-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.account-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.account-type {
+  background-color: #007bff;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.account-details p {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.account-number {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.balance {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.date {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-header h1 {
+    color: #fff;
+  }
+  
+  .account-card {
+    background: #333;
+    border-color: #555;
+    color: #fff;
+  }
+  
+  .account-header h3 {
+    color: #fff;
+  }
+  
+  .account-details p {
+    color: #ccc;
+  }
+  
+  .balance {
+    color: #40d65e;
+  }
+  
+  .date {
+    color: #999;
+  }
+}
