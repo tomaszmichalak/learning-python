@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       banking-api: ${{ steps.changes.outputs.banking-api }}
+      banking-web: ${{ steps.changes.outputs.banking-web }}
       basics: ${{ steps.changes.outputs.basics }}
       any-python: ${{ steps.changes.outputs.any-python }}
     steps:
@@ -22,6 +23,8 @@ jobs:
           filters: |
             banking-api:
               - 'banking-api/**'
+            banking-web:
+              - 'banking-web/**'
             basics:
               - 'basics/**'
             any-python:
@@ -38,6 +41,45 @@ jobs:
       python_versions: '["3.13"]'
       run_tests: true
       test_command: 'python run_domain_tests.py && pytest test_domains.py -v'
+
+  # Test Banking Web module
+  test-banking-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.banking-web == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: banking-web/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./banking-web
+        run: npm ci
+        
+      - name: Run TypeScript type check
+        working-directory: ./banking-web
+        run: npx tsc --noEmit
+        
+      - name: Run ESLint
+        working-directory: ./banking-web
+        run: npm run lint
+        
+      - name: Build project
+        working-directory: ./banking-web
+        run: npm run build
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: banking-web-build
+          path: banking-web/dist/
+          retention-days: 1
 
   # Test Basics module (lightweight check)
   test-basics:
@@ -86,10 +128,15 @@ jobs:
         run: |
           find . -name "requirements*.txt" -not -path "./.venv/*" -exec safety check -r {} \; || true
 
-  # Integration tests for API modules
+  # Integration tests for full stack
   integration-tests:
-    needs: [detect-changes, test-banking-api]
-    if: needs.detect-changes.outputs.banking-api == 'true'
+    needs: [detect-changes, test-banking-api, test-banking-web]
+    if: |
+      always() && 
+      (needs.detect-changes.outputs.banking-api == 'true' || 
+       needs.detect-changes.outputs.banking-web == 'true') &&
+      (needs.test-banking-api.result == 'success' || needs.test-banking-api.result == 'skipped') &&
+      (needs.test-banking-web.result == 'success' || needs.test-banking-web.result == 'skipped')
     runs-on: ubuntu-latest
     
     steps:
@@ -100,24 +147,98 @@ jobs:
         with:
           python-version: '3.13'
           
-      - name: Install dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: banking-web/package-lock.json
+          
+      - name: Install Python dependencies
         working-directory: ./banking-api
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
+      - name: Install Node.js dependencies
+        working-directory: ./banking-web
+        run: npm ci
+          
+      - name: Build banking-web
+        working-directory: ./banking-web
+        run: npm run build
+          
+      - name: Start services with Docker Compose
+        working-directory: ./banking-compose
+        run: |
+          docker compose up --build -d
+          
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Wait for API to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/ > /dev/null 2>&1; then
+              echo "API is ready"
+              break
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          
+          # Wait for Web to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:3000/ > /dev/null 2>&1; then
+              echo "Web frontend is ready"
+              break
+            fi
+            echo "Waiting for Web frontend... ($i/30)"
+            sleep 2
+          done
+          
       - name: Run API integration tests
         working-directory: ./banking-api
         run: |
-          # Start the API in background
-          python main.py &
-          API_PID=$!
-          
-          # Wait for API to start
-          sleep 5
-          
-          # Run integration tests
           python test_api.py
           
-          # Cleanup
-          kill $API_PID || true
+      - name: Test API endpoints
+        run: |
+          # Test direct API
+          echo "Testing direct API endpoints..."
+          curl -f http://localhost:8000/ || exit 1
+          curl -f http://localhost:8000/accounts || exit 1
+          
+          # Test API through proxy
+          echo "Testing API through web proxy..."
+          curl -f http://localhost:3000/api/accounts || exit 1
+          
+          # Create test account
+          echo "Creating test account..."
+          ACCOUNT_DATA='{"account_holder": "Integration Test", "account_type": "checking", "balance": 500.0}'
+          curl -X POST -H "Content-Type: application/json" -d "$ACCOUNT_DATA" http://localhost:3000/api/accounts || exit 1
+          
+          # Verify account was created
+          echo "Verifying account creation..."
+          ACCOUNTS=$(curl -s http://localhost:3000/api/accounts)
+          echo "Accounts response: $ACCOUNTS"
+          if [[ "$ACCOUNTS" == "[]" ]]; then
+            echo "ERROR: Account was not created"
+            exit 1
+          fi
+          
+      - name: Check service logs
+        if: always()
+        working-directory: ./banking-compose
+        run: |
+          echo "=== Banking API Logs ==="
+          docker compose logs banking-api
+          echo "=== Banking Web Logs ==="
+          docker compose logs banking-web
+          
+      - name: Cleanup
+        if: always()
+        working-directory: ./banking-compose
+        run: |
+          docker compose down -v
