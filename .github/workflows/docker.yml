@@ -45,12 +45,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
         
       - name: Build Docker image
-        working-directory: ./banking-api
+        working-directory: ./banking-api/api
         run: |
           docker build -t banking-api:test .
           
       - name: Test Docker image
-        working-directory: ./banking-api
+        working-directory: ./banking-api/api
         run: |
           # Test that the image builds and runs
           docker run -d --name banking-api-test -p 8001:8000 banking-api:test
@@ -71,7 +71,7 @@ jobs:
           docker rm banking-api-test
           
       - name: Test with Docker Compose
-        working-directory: ./banking-api
+        working-directory: ./banking-api/api
         run: |
           if [ -f docker-compose.yml ]; then
             docker-compose up -d
@@ -81,7 +81,7 @@ jobs:
           fi
           
       - name: Scan for vulnerabilities
-        working-directory: ./banking-api
+        working-directory: ./banking-api/api
         run: |
           # Install Trivy for vulnerability scanning
           sudo apt-get update

@@ -1,11 +1,13 @@
 # Banking Web Application
 
-A React TypeScript frontend application for displaying banking accounts from the banking API.
+A React TypeScript frontend application for displaying banking accounts and real-time transaction updates.
 
 ## Features
 
 - Display all banking accounts in a responsive grid layout
 - Show account details including owner name, account number, type, and balance
+- **Real-time transaction updates via WebSocket**
+- **Live transaction streaming with account filtering**
 - Real-time account balance formatting with currency display
 - Dark/light mode support
 - Error handling with retry functionality
@@ -17,68 +19,61 @@ A React TypeScript frontend application for displaying banking accounts from the
 - npm or yarn package manager
 - Banking API running on http://localhost:8000
 
-## Installation
+## Quick Start
 
-1. Clone the repository or navigate to the banking-web directory
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-## Development
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-Start the development server:
-```bash
-npm run dev
-```
+The application will be available at http://localhost:5173
 
-The application will be available at http://localhost:3000
+## WebSocket Features 🔄
 
-## Building for Production
-
-Create a production build:
-```bash
-npm run build
-```
-
-Preview the production build:
-```bash
-npm run preview
-```
+Real-time transaction updates:
+- **TransactionStream** - Live transaction updates with WebSocket connection
+- **useWebSocket** - Robust WebSocket hook with automatic reconnection
 
 ## API Integration
 
-The application connects to the banking API at `http://localhost:8000/accounts`. Make sure the banking API is running before starting this frontend application.
+The application connects to the banking API at `http://localhost:8000`. 
 
-### API Endpoints Used
-
-- `GET /accounts` - Fetches all banking accounts
-
-## Project Structure
-
-```
-src/
-├── App.tsx          # Main application component
-├── App.css          # Application styles
-├── main.tsx         # Application entry point
-└── index.css        # Global styles
-```
+### API Endpoints
+- `GET /api/accounts` - Fetches all banking accounts
+- `GET /api/transactions` - Fetches transactions  
+- `POST /api/transactions` - Creates new transactions
+- `WebSocket /api/ws/transactions` - Real-time transaction updates
 
 ## Technologies Used
 
-- React 18
-- TypeScript
-- Vite
-- CSS3 with CSS Grid and Flexbox
-- Fetch API for HTTP requests
+- React 18 with TypeScript
+- Vite build tool
+- WebSocket API for real-time updates
+- CSS3 with responsive design
 
 ## Scripts
 
 - `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
+- `npm run build` - Build for production  
 - `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-## CORS Configuration
+## Building for Production
 
-If you encounter CORS issues, make sure the banking API includes the appropriate CORS headers to allow requests from http://localhost:3000.
+```bash
+npm run build
+npm run preview
+```
+
+## Contributing
+
+For development setup, debugging, and contribution guidelines, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+This project is part of the learning-python repository.

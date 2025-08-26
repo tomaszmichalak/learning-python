@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   banking-api:
     build: 
-      context: ../banking-api
+      context: ../banking-api/api
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -12,7 +10,7 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
     volumes:
-      - ../banking-api:/app
+      - ../banking-api/api:/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -44,6 +42,19 @@ services:
         condition: service_healthy
     networks:
       - banking-network
+
+  data-seeder:
+    build:
+      context: .
+      dockerfile: Dockerfile.seed
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      banking-api:
+        condition: service_healthy
+    networks:
+      - banking-network
+    restart: "no"  # Run once and exit
 
 networks:
   banking-network:

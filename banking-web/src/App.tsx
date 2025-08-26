@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
+import { TransactionStream } from './components/TransactionStream'
 
 interface Account {
   account_id: string
@@ -14,6 +15,8 @@ function App() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+  const [showTransactionStream, setShowTransactionStream] = useState(false)
 
   useEffect(() => {
     fetchAccounts()
@@ -77,43 +80,87 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Banking Accounts</h1>
-        <button onClick={fetchAccounts} className="refresh-btn">
-          Refresh
-        </button>
+        <h1>Banking Dashboard</h1>
+        <div className="header-actions">
+          <button 
+            onClick={() => setShowTransactionStream(!showTransactionStream)} 
+            className="toggle-stream-btn"
+          >
+            {showTransactionStream ? 'Hide' : 'Show'} Live Transactions
+          </button>
+          <button onClick={fetchAccounts} className="refresh-btn">
+            Refresh Accounts
+          </button>
+        </div>
       </header>
 
-      <main className="accounts-container">
-        {accounts.length === 0 ? (
-          <div className="no-accounts">
-            <p>No accounts found</p>
-          </div>
-        ) : (
-          <div className="accounts-grid">
-            {accounts.map((account) => (
-              <div key={account.account_id} className="account-card">
-                <div className="account-header">
-                  <h3>{account.account_holder}</h3>
-                  <span className="account-type">{account.account_type}</span>
-                </div>
-                <div className="account-details">
-                  <p className="account-id">
-                    Account ID: {account.account_id}
-                  </p>
-                  <p className="balance">
-                    Balance: {formatCurrency(account.balance)}
-                  </p>
-                  <p className="date">
-                    Created: {formatDate(account.created_at)}
-                  </p>
-                  <p className="status">
-                    Status: {account.is_active ? 'Active' : 'Inactive'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+      <main className="main-content">
+        {showTransactionStream && (
+          <section className="transaction-stream-section">
+            <TransactionStream 
+              accountId={selectedAccountId || undefined}
+              className="main-transaction-stream"
+            />
+          </section>
         )}
+
+        <section className="accounts-section">
+          <h2>Accounts</h2>
+          {loading ? (
+            <div className="loading">Loading accounts...</div>
+          ) : error ? (
+            <div className="error">
+              <h3>Error loading accounts</h3>
+              <p>{error}</p>
+              <button onClick={fetchAccounts}>Retry</button>
+            </div>
+          ) : accounts.length === 0 ? (
+            <div className="no-accounts">
+              <p>No accounts found</p>
+            </div>
+          ) : (
+            <div className="accounts-grid">
+              {accounts.map((account) => (
+                <div 
+                  key={account.account_id} 
+                  className={`account-card ${selectedAccountId === account.account_id ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedAccountId(selectedAccountId === account.account_id ? null : account.account_id)
+                    if (!showTransactionStream) {
+                      setShowTransactionStream(true)
+                    }
+                  }}
+                >
+                  <div className="account-header">
+                    <h3>{account.account_holder}</h3>
+                    <span className="account-type">{account.account_type}</span>
+                  </div>
+                  <div className="account-details">
+                    <p className="account-id">
+                      Account ID: {account.account_id}
+                    </p>
+                    <p className="balance">
+                      Balance: {formatCurrency(account.balance)}
+                    </p>
+                    <p className="date">
+                      Created: {formatDate(account.created_at)}
+                    </p>
+                    <p className="status">
+                      Status: {account.is_active ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                  {selectedAccountId === account.account_id && (
+                    <div className="selected-indicator">
+                      🔴 Viewing Live Transactions
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+
       </main>
     </div>
   )

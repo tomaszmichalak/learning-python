@@ -1,0 +1,9 @@
+# Core dependencies for Banking API
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.9.2
+python-multipart==0.0.20
+websockets==15.0.1
+python-dotenv==1.1.1
+requests==2.31.0
+PyYAML==6.0.2

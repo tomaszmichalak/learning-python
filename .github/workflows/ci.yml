@@ -40,7 +40,7 @@ jobs:
       module_path: banking-api
       python_versions: '["3.13"]'
       run_tests: true
-      test_command: 'python run_domain_tests.py && pytest test_domains.py -v'
+      test_command: 'cd api && pytest test_domains.py -v && pytest domains/ -v'
 
   # Test Banking Web module
   test-banking-web:
@@ -155,7 +155,7 @@ jobs:
           cache-dependency-path: banking-web/package-lock.json
           
       - name: Install Python dependencies
-        working-directory: ./banking-api
+        working-directory: ./banking-api/api
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -198,10 +198,15 @@ jobs:
             sleep 2
           done
           
-      - name: Run API integration tests
-        working-directory: ./banking-api
+      - name: Run REST API integration tests
+        working-directory: ./banking-api/it-tests
         run: |
-          python test_api.py
+          python test_rest_api.py
+          
+      - name: Run WebSocket integration tests
+        working-directory: ./banking-api/it-tests
+        run: |
+          pytest test_websocket.py -v
           
       - name: Test API endpoints
         run: |

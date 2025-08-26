@@ -148,7 +148,8 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt  # if available
 
 # Run tests
-python run_domain_tests.py  # banking-api specific
+pytest domains/ -v          # banking-api unit tests
+pytest test_domains.py -v   # banking-api integration tests
 pytest -v                   # general testing
 ```
 

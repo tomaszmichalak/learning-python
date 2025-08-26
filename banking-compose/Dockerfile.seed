@@ -1,0 +1,13 @@
+FROM python:3.11-alpine
+
+# Install requests library
+RUN pip install --no-cache-dir requests
+
+# Copy the seed script
+COPY seed-data.py /seed-data.py
+
+# Make the script executable
+RUN chmod +x /seed-data.py
+
+# Run the seed script
+CMD ["python", "/seed-data.py"]

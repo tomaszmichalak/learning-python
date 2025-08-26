@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ inputs.module_path }}-${{ hashFiles(format('{0}/requirements*.txt', inputs.module_path)) }}
+          key: ${{ runner.os }}-pip-${{ inputs.module_path }}-${{ hashFiles(format('{0}/**/requirements*.txt', inputs.module_path)) }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ inputs.module_path }}-
             
@@ -50,6 +50,11 @@ jobs:
         working-directory: ./${{ inputs.module_path }}
         run: |
           python -m pip install --upgrade pip
+          
+          # Check if we're in banking-api and need to go to api subdirectory
+          if [ "${{ inputs.module_path }}" = "banking-api" ] && [ -f api/requirements.txt ]; then
+            cd api
+          fi
           
           # Install main requirements
           if [ -f requirements.txt ]; then
@@ -67,27 +72,47 @@ jobs:
       - name: Lint with flake8
         working-directory: ./${{ inputs.module_path }}
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # Handle banking-api with api subdirectory
+          if [ "${{ inputs.module_path }}" = "banking-api" ] && [ -d api ]; then
+            cd api
+            flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=__pycache__
+            flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=__pycache__
+          else
+            flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+            flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          fi
           
       - name: Check code formatting
         working-directory: ./${{ inputs.module_path }}
         run: |
-          black --check --diff . || true
-          isort --check-only --diff . || true
+          # Handle banking-api with api subdirectory
+          if [ "${{ inputs.module_path }}" = "banking-api" ] && [ -d api ]; then
+            cd api
+            black --check --diff . || true
+            isort --check-only --diff . || true
+          else
+            black --check --diff . || true
+            isort --check-only --diff . || true
+          fi
           
       - name: Type check
         working-directory: ./${{ inputs.module_path }}
         run: |
-          mypy . --ignore-missing-imports || true
+          # Handle banking-api with api subdirectory
+          if [ "${{ inputs.module_path }}" = "banking-api" ] && [ -d api ]; then
+            cd api
+            mypy . --ignore-missing-imports || true
+          else
+            mypy . --ignore-missing-imports || true
+          fi
           
       - name: Run tests
         if: inputs.run_tests
         working-directory: ./${{ inputs.module_path }}
         run: |
-          # Try different test commands based on what's available
-          if [ -f run_domain_tests.py ]; then
-            python run_domain_tests.py
+          # Handle banking-api special case with api subdirectory
+          if [ "${{ inputs.module_path }}" = "banking-api" ] && [ -d api ]; then
+            ${{ inputs.test_command }}
           elif [ -f test_*.py ] || [ -d tests/ ]; then
             ${{ inputs.test_command }}
           else

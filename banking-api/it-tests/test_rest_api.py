@@ -1,6 +1,6 @@
 """
-Simple test examples for the Banking API
-Run this after starting the FastAPI server to test the endpoints
+REST API integration tests for the Banking API
+Run this after starting the FastAPI server to test the REST endpoints
 """
 
 import requests

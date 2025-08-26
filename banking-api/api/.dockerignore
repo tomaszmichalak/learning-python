@@ -28,6 +28,13 @@ coverage.xml
 .pytest_cache
 .hypothesis
 
+# Test files (excluded from production builds)
+test_*.py
+*_test.py
+*/test_*.py
+**/test_*.py
+test_domains.py
+
 # Virtual environments
 .venv
 .env

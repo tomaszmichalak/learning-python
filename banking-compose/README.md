@@ -221,5 +221,15 @@ For faster development cycles, consider using volume mounts for live code reload
 ## Testing
 
 ```bash
-curl -X POST "http://localhost:3000/api/accounts" -H "Content-Type: application/json" -d '{"account_holder": "Test User", "account_type": "savings", "balance": 1000.0}'
+# Create an account and store the account ID in a variable
+ACCOUNT_ID=$(curl -s -X POST "http://localhost:3000/api/accounts" -H "Content-Type: application/json" -d '{"account_holder": "Test User", "account_type": "savings", "balance": 1000.0}' | jq -r '.account_id')
+
+# Verify the account was created and display the account ID
+echo "Created account: $ACCOUNT_ID"
+
+# Create a transaction using the stored account ID
+curl -X POST "http://localhost:3000/api/transactions" -H "Content-Type: application/json" -d "{\"account_id\": \"$ACCOUNT_ID\", \"amount\": 150.0, \"transaction_type\": \"deposit\", \"description\": \"Test real-time update\"}"
+
+# Alternative: Create account and transaction in one line
+ACCOUNT_ID=$(curl -s -X POST "http://localhost:3000/api/accounts" -H "Content-Type: application/json" -d '{"account_holder": "Test User", "account_type": "savings", "balance": 1000.0}' | jq -r '.account_id') && curl -X POST "http://localhost:3000/api/transactions" -H "Content-Type: application/json" -d "{\"account_id\": \"$ACCOUNT_ID\", \"amount\": 250.0, \"transaction_type\": \"deposit\", \"description\": \"Automated test transaction\"}"
 ```
